@@ -25,6 +25,7 @@ metadata {
 		capability "Refresh"
 		capability "Relative Humidity Measurement"
 		capability "Health Check"
+		capability "Motion Sensor"
 
 		command "generateEvent"
 		command "resumeProgram"
@@ -38,6 +39,7 @@ metadata {
 		command "poll"
 
 		attribute "thermostat", "string"
+		attribute "currentClimate", "string"
 		attribute "maxHeatingSetpoint", "number"
 		attribute "minHeatingSetpoint", "number"
 		attribute "maxCoolingSetpoint", "number"
@@ -115,10 +117,16 @@ metadata {
 			state "resume", action:"resumeProgram", nextState: "updating", label:'Resume', icon:"st.samsung.da.oven_ic_send"
 			state "updating", label:"Working", icon: "st.secondary.secondary"
 		}
+		standardTile("motion", "device.motion", inactiveLabel: false, width: 2, height: 1) {
+			state "active", label:"Motion", icon:"st.motion.motion.active", backgroundColor:"#00A0DC"
+			state "inactive", label:"No Motion", icon:"st.motion.motion.inactive", backgroundColor:"#cccccc"
+		}
 		main "temperature"
-		details(["temperature",  "lowerHeatingSetpoint", "heatingSetpoint", "raiseHeatingSetpoint",
-				"lowerCoolSetpoint", "coolingSetpoint", "raiseCoolSetpoint", "mode", "fanMode",
-				"thermostat", "resumeProgram", "refresh"])
+		details(["temperature",  
+				"lowerHeatingSetpoint", "heatingSetpoint", "raiseHeatingSetpoint",
+				"lowerCoolSetpoint", "coolingSetpoint", "raiseCoolSetpoint", 
+				"mode", "fanMode", "thermostat", "resumeProgram", 
+				"motion", "refresh"])
 	}
 
 	preferences {

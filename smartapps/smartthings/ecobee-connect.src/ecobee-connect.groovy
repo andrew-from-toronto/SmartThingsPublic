@@ -1294,7 +1294,9 @@ def getThermostatData(data) {
 			coolingSetpoint: (data.runtime.desiredCool / 10),
 			thermostatMode: data.settings.hvacMode,
 			humidity: data.runtime.actualHumidity,
-			thermostatFanMode: data.runtime.desiredFanMode
+			thermostatFanMode: data.runtime.desiredFanMode,
+			currentClimate: data.program.currentClimateRef,
+			motion: (data.remoteSensors.find( it.type == "thermostat" && it.id == "ei:0" ).occupancy.find( it.type == "occupancy" ).value occupancy == "true") ? "active" : "inactive"
 	]
 }
 
