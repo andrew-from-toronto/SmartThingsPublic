@@ -13,20 +13,22 @@
  *
  */
 metadata {
-	definition (name: "Z-Wave Radiator Thermostat", namespace: "smartthings", author: "SmartThings", ocfDeviceType: "oic.d.thermostat") {
-		capability "Thermostat Mode"
+	definition (name: "Z-Wave Radiator Thermostat", namespace: "smartthings", author: "SmartThings", ocfDeviceType: "oic.d.thermostat",
+			mnmn: "SmartThings", vid: "SmartThings-smartthings-Fibaro_Heat_Controller") {
 		capability "Refresh"
 		capability "Battery"
 		capability "Thermostat Heating Setpoint"
 		capability "Health Check"
 		capability "Thermostat"
+		capability "Thermostat Mode"
 		capability "Temperature Measurement"
 		capability "Configuration"
 
-		fingerprint mfr: "0060", prod: "0015", model: "0001", deviceJoinName: "Everspring Thermostatic Radiator Valve", mnmn: "SmartThings", vid: "generic-radiator-thermostat"
+		fingerprint mfr: "0060", prod: "0015", model: "0001", deviceJoinName: "Everspring Thermostat", mnmn: "SmartThings", vid: "generic-radiator-thermostat" //Everspring Thermostatic Radiator Valve
 		//this DTH is sending temperature setpoint commands using Celsius scale and assumes that they'll be handled correctly by device
 		//if new device added to this DTH won't be able to do that, make sure to you'll handle conversion in a right way
-		fingerprint mfr: "0002", prod: "0115", model: "A010", deviceJoinName: "POPP Radiator Thermostat Valve", mnmn: "SmartThings", vid: "generic-radiator-thermostat-2"
+		fingerprint mfr: "0002", prod: "0115", model: "A010", deviceJoinName: "POPP Thermostat", mnmn: "SmartThings", vid: "generic-radiator-thermostat-2" //POPP Radiator Thermostat Valve
+		fingerprint mfr: "0371", prod: "0002", model: "0015", deviceJoinName: "Aeotec Thermostat", mnmn: "SmartThings", vid: "aeotec-radiator-thermostat" //Aeotec Radiator Thermostat ZWA021
 	}
 
 	tiles(scale: 2) {
@@ -168,6 +170,9 @@ def zwaveEvent(physicalgraph.zwave.commands.thermostatmodev2.ThermostatModeRepor
 			map.value = "heat"
 			break
 		case 11:
+			map.value = "energysaveheat"
+			break
+		case 15:
 			map.value = "emergency heat"
 			break
 		case 0:
@@ -200,6 +205,12 @@ def zwaveEvent(physicalgraph.zwave.commands.sensormultilevelv5.SensorMultilevelR
 	createEvent(name: "temperature", value: convertTemperatureIfNeeded(cmd.scaledSensorValue, deviceTemperatureScale, cmd.precision), unit: temperatureScale)
 }
 
+def zwaveEvent(physicalgraph.zwave.commands.notificationv3.NotificationReport cmd) {
+	// Power Management - Power has been applied
+	if (cmd.notificationType == 0x08 && cmd.event == 0x01)
+		[response(zwave.batteryV1.batteryGet())]
+}
+
 def zwaveEvent(physicalgraph.zwave.Command cmd) {
 	log.warn "Unhandled command: ${cmd}"
 	[:]
@@ -213,6 +224,9 @@ def setThermostatMode(String mode) {
 				modeValue = 1
 				break
 			case "emergency heat":
+				modeValue = 15
+				break
+			case "energysaveheat":
 				modeValue = 11
 				break
 			case "off":
@@ -225,7 +239,7 @@ def setThermostatMode(String mode) {
 
 	[
 			secure(zwave.thermostatModeV2.thermostatModeSet(mode: modeValue)),
-			"delay 2000",
+			"delay 5000",
 			secure(zwave.thermostatModeV2.thermostatModeGet())
 	]
 }
@@ -281,7 +295,7 @@ private secure(cmd) {
 }
 
 def multiEncap(cmds) {
-	if (zwaveInfo.cc.contains("8F")) {
+	if (zwaveInfo?.cc?.contains("8F")) {
 		secure(zwave.multiCmdV1.multiCmdEncap().encapsulate(cmds.collect {
 			cmd -> cmd.format()
 		}))
@@ -295,7 +309,7 @@ def multiEncap(cmds) {
 private getMaxHeatingSetpointTemperature() {
 	if (isEverspringRadiatorThermostat()) {
 		temperatureScale == 'C' ? 35 : 95
-	} else if (isPoppRadiatorThermostat()) {
+	} else if (isPoppRadiatorThermostat() || isAeotecRadiatorThermostat()) {
 		temperatureScale == 'C' ? 28 : 82
 	} else {
 		temperatureScale == 'C' ? 30 : 86
@@ -307,6 +321,8 @@ private getMinHeatingSetpointTemperature() {
 		temperatureScale == 'C' ? 15 : 59
 	} else if (isPoppRadiatorThermostat()) {
 		temperatureScale == 'C' ? 4 : 39
+	} else if (isAeotecRadiatorThermostat()) {
+		temperatureScale == 'C' ? 8 : 47
 	} else {
 		temperatureScale == 'C' ? 10 : 50
 	}
@@ -314,6 +330,8 @@ private getMinHeatingSetpointTemperature() {
 
 private getThermostatSupportedModes() {
 	if (isEverspringRadiatorThermostat()) {
+		["off", "heat", "energysaveheat"]
+	} else if (isAeotecRadiatorThermostat()) {
 		["off", "heat", "emergency heat"]
 	} else if (isPoppRadiatorThermostat()) { //that's just for looking fine in Classic
 		["heat"]
@@ -336,4 +354,8 @@ private isEverspringRadiatorThermostat() {
 
 private isPoppRadiatorThermostat() {
 	zwaveInfo.mfr == "0002" && zwaveInfo.prod == "0115"
+}
+
+private isAeotecRadiatorThermostat() {
+	zwaveInfo.mfr == "0371" && zwaveInfo.prod == "0002"
 }

@@ -27,6 +27,13 @@ metadata {
 		capability "Health Check"
 		capability "Motion Sensor"
 
+		// New discrete thermostat capabilities, added to replace "Thermostat" and prepare for migration to st-schema
+		capability "Thermostat Cooling Setpoint"
+		capability "Thermostat Heating Setpoint"
+		capability "Thermostat Mode"
+		capability "Thermostat Fan Mode"
+		capability "Thermostat Operating State"
+
 		command "generateEvent"
 		command "resumeProgram"
 		command "switchMode"
